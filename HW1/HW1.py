@@ -1,5 +1,7 @@
 '''
-Sample file for organizing code for HW1
+ME 598 CUDA
+Author: Hien (Ryan) Nguyen
+Last modified: 01/16/2018
 '''
 
 import numpy as np  # import scientific computing library
