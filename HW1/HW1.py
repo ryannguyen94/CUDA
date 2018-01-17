@@ -206,19 +206,6 @@ def nu_norm(u):
         res += out[i]
     return np.sqrt(res)
 
-def nu_norm_2(u):
-    n = u.shape[0]
-    d_u = cuda.to_device(u)
-    d_out = cuda.device_array(n)
-    threads = TPB  # excessive use of local variables for clarity
-    grids = (n + TPB - 1) // TPB  # ditto
-    norm_kernel[grids, threads](d_u, d_out)
-    res = 0
-    out = d_out.copy_to_host()
-    for i in range(n):
-        res += out[n-i]
-    return np.sqrt(res)
-
 """ Question 5 functions """
 
 # 5a
@@ -278,6 +265,10 @@ def main():
     print (lerp(array1, c, array2))
     print ("Testing component-wise multiplication with array1 ", array1, " and array2 ", array2)
     print (mult_comp2(array1, array2))
+    print ("Testing inner product with array1 ", array1, " and array2 ", array2)
+    print (inner(array1, array2))
+    print ("Testing norm function with array1 ", array1)
+    print (norm(array1))
     print ("\n")
 
     # Question 4
@@ -290,6 +281,10 @@ def main():
     print (nu_linearF(array1, c, array2))
     print ("Testing component-wise multiplication with array1 ", array1, " and array2 ", array2)
     print(nu_mult_comp2(array1, array2))
+    print ("Testing inner product with array1 ", array1, " and array2 ", array2)
+    print (nu_inner(array1, array2))
+    print ("Testing norm function with array1 ", array1)
+    print (nu_norm(array1))
     print ("\n")
 
     # Question 5
