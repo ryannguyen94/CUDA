@@ -5,7 +5,7 @@ Last modified: 01/16/2018
 '''
 
 import numpy as np  # import scientific computing library
-import matplotlib as plt  # import plotting library
+import matplotlib.pyplot as plt  # import plotting library
 from numba import cuda
 import math
 
@@ -21,8 +21,8 @@ def RN_linspace(min, max, size):
         res[i] = min + i * (max - min) / (size - 1)
     return res
 
+""" Question 3 functions """
 
-# function definitions for problem 3
 def scalar_mult(u, c):  # 3a
     res = np.empty(np.size(u))
     for i in range(np.size(res)):
@@ -81,7 +81,7 @@ def norm(u):  # 3f
     return math.sqrt(out)
 
 
-# function definitions for problem 4
+""" Question 4 functions """
 
 # 4a
 @cuda.jit
@@ -164,16 +164,6 @@ def nu_mult_comp2(u, v):
     mult_comp_kernel[grids, threads](d_u, d_v, d_out)
     return d_out.copy_to_host()
 
-
-# 4e How does inner product differ from multiplying components?
-def nu_inner(u, v):
-    out = nu_mult_comp2(u, v)
-    res = 0
-    for i in range(u.shape[0]):
-       res += out[i]
-    return res
-
-
 # alternate version
 def nu_mult_comp3(u, v, out):
     n = u.shape[0]
@@ -184,6 +174,14 @@ def nu_mult_comp3(u, v, out):
     grids = (n + TPB - 1) // TPB
     mult_comp_kernel[grids, threads](d_u, d_v, d_out)
     out = d_out.copy_to_host()
+
+# 4e
+def nu_inner(u, v):
+    out = nu_mult_comp2(u, v)
+    res = 0
+    for i in range(u.shape[0]):
+       res += out[i]
+    return res
 
 # 4f
 @cuda.jit
@@ -221,7 +219,7 @@ def nu_norm_2(u):
         res += out[n-i]
     return np.sqrt(res)
 
-# 5
+""" Question 5 functions """
 
 # 5a
 def test1(n):
@@ -255,17 +253,17 @@ def reverseDot(u, v):
 
 # main function to compute requested results
 def main():
-    # 2a-Insert your code here
+
     # Question 2
     n = 11
     nIndex = range(n)
     array1 = np.linspace(0, 2 * math.pi, 11)
     array2 = RN_linspace(0, 2 * math.pi, 11)
 
-    # plt.plot(nIndex, array1, 'r--', label='numpy_linspace')
-    # plt.plot(nIndex, array2, 'g^', label='custom_linspace')
-    # plt.legend()
-    # plt.show()
+    plt.plot(nIndex, array1, 'r--', label='numpy_linspace')
+    plt.plot(nIndex, array2, 'g^', label='custom_linspace')
+    plt.legend()
+    plt.show()
 
     # Question 3
     print ("---------- Testing functions of problem 3 ----------")
@@ -305,7 +303,8 @@ def main():
     print ("At ~457000, the result produce a slightly different value for the inner"
     	" product and the reversed inner product. This might be because float operation"
     	" are not necessarily commutative, so at very small float value, the variable"
-    	" is round to the nearest value that can be represented in memory.")
+    	" is round to the nearest value that can be represented in memory. Thefore,"
+    	" the order of summation matters")
 
 # call to execute main
 if __name__ == '__main__':
