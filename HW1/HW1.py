@@ -100,7 +100,7 @@ def nu_scalar_mult(u, c):
     d_out = cuda.device_array(n)
     threads = TPB  # excessive use of local variables for clarity
     grids = (n + TPB - 1) // TPB  # ditto
-    scalar_mult_kernel[grids, threads](d_u, d_c, d_out)
+    scalar_mult_kernel[grids, threads](d_u, c, d_out)
     return d_out.copy_to_host()
 
 # 4b
