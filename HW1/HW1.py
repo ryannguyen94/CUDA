@@ -90,13 +90,12 @@ def scalar_mult_kernel(d_u, d_c, d_out):
     i = cuda.grid(1)
     if i >= n:
         return
-    d_out[i] = d_u[i] * d_c[0]
+    d_out[i] = d_u[i] * d_c
 
 
 def nu_scalar_mult(u, c):
     n = u.shape[0]
     d_u = cuda.to_device(u)
-    d_c = cuda.to_device(np.ones(1)*c)
     d_out = cuda.device_array(n)
     threads = TPB  # excessive use of local variables for clarity
     grids = (n + TPB - 1) // TPB  # ditto
@@ -130,18 +129,17 @@ def linearF_kernel(d_x, d_c, d_d, d_out):
     i = cuda.grid(1)
     if i >= n:
         return
-    d_out[i] = d_c[0]*d_x[i] + d_d[i]
+    d_out[i] = d_c*d_x[i] + d_d[i]
 
 
 def nu_linearF(x, c, d):
     n = x.shape[0]
     d_x = cuda.to_device(x)
-    d_c = cuda.to_device(np.ones(1)*c)
     d_d = cuda.to_device(d)
     d_out = cuda.device_array(n)
     threads = TPB  # excessive use of local variables for clarity
     grids = (n + TPB - 1) // TPB  # ditto
-    linearF_kernel[grids, threads](d_x, d_c, d_d, d_out)
+    linearF_kernel[grids, threads](d_x, c, d_d, d_out)
     return d_out.copy_to_host()
 
 # 4d
@@ -288,7 +286,7 @@ def main():
     print ("\n")
 
     # Question 5
-    print ("---------- Testing functions of problem 4 ----------")
+    print ("---------- Testing functions of problem 5 ----------")
     print ("Running first test with n = 5")
     test1(5)
     print()
