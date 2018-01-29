@@ -58,8 +58,8 @@ def question2():
 
     TPBX = 8
     TPBY = 32
-    NX = np.linspace(100, 1000, 10)
-    NY = np.linspace(100, 1000, 10)
+    NX = np.linspace(100, 3500, 10)
+    NY = np.linspace(100, 3500, 10)
 
     sTime = [0]*len(NX)
     pTime = [0]*len(NX)
@@ -82,21 +82,17 @@ def question2():
         accel[i] = sTime[i]/pTime[i]
         print ("Accel is: ", accel[i])
 
-    # plt.figure(1)
-    # plt.subplot(211)
-    # plt.plot(NX, sTime, 'r--', label='series runtime')
-    # plt.plot(NX, pTime, 'g^', label='parallel_runtime')
-    # plt.legend()
-    # plt.title("Series and Parallel Runtime vs Array Size")
+    plt.figure(1)
+    plt.subplot(211)
+    plt.plot(NX, sTime, 'r--', label='series runtime')
+    plt.plot(NX, pTime, 'g^', label='parallel_runtime')
+    plt.legend()
+    plt.title("Series and Parallel Runtime vs Array Size")
 
-    # plt.subplot(212)
-    # plt.plot(NX, accel)
-    # plt.title("Acceleration vs Array Size")
-    # plt.show()
-
-    # X,Y = np.meshgrid (x, y)
-    # plt.contourf (X, Y, f)
-    # plt.show ()
+    plt.subplot(212)
+    plt.plot(NX, accel)
+    plt.title("Acceleration vs Array Size")
+    plt.show()
 
 ''' Question 3 functions '''
 def question3():
@@ -165,11 +161,60 @@ def pnorm(array, p):
     norm_kernel[gridDims, blockDims](d_array, d_out, p)
     return d_out.copy_to_host()[0] ** (1/p)
 
+''' Question 6 '''
+def question6():
+    print ("---------- Question 6 ----------")
+
+    t = np.linspace(0, 10, 10000)
+    dt = 10/1000
+    x_i = np.linspace(0, 3, 4)
+    v_i = np.linspace(0, 3, 4)
+
+    iterate(x_i, v_i, dt)
+
+    for i in range(len(t) - 1):
+    	[x[i+1], v[i+1]] = iterate(x[i], v[i], dt)
+
+    plt.plot(x, v)
+    plt.show()
+
+# 6c
+def iterate(x_i, v_i, dt):
+    TPBX = 16
+    TPBY = 16
+
+    nx, nv = np.array((x_i, v_i)).shape
+    d_xi = cuda.to_device(np.array(x_i))
+    d_vi = cuda.to_device(np.array(v_i))
+    d_out = cuda.device_array((nx, ny), dtype=np.float32)
+
+    gridDims = ((nx + TPBX - 1) // TPBX,
+                (nv + TPBV - 1) // TPBV)
+    blockDims = (TPBX, TPBV)
+
+
+    iterate_kernel[gridDims, blockDims](d_xi, d_vi, d_out, dt)
+    return d_out.copy_to_host()
+
+@cuda.jit
+def iterate_kernel(d_xi, d_vi, d_out, dt):
+	i, j = cuda.grid(2)
+    nx , nv = d_out.shape
+
+    if i < nx and j < ny:
+    	for i in range(100):
+
+
+
+# 6d
+
+
 def main():
     # question2()
     # question3()
     # question4()
-    question5(100000)
+    # question5(10000)
+    question6(1, 1)
 
 # call to execute main
 if __name__ == '__main__':
