@@ -18,6 +18,11 @@ RAD_2C = 2
 NSHARED_2B = TPB_2 + 2*RAD_2B
 NSHARED_2C = TPB_2 + 2*RAD_2C
 
+TPB_3C_X = 16
+TPB_3C_Y = 16
+RAD_3C = 1
+NSHARED_3C_X = TPB_3C_X + 2*RAD_3C
+NSHARED_3C_Y = TPB_3C_Y + 2*RAD_3C
 """ Question 1 functions """
 
 def analysisArray(testArray):
@@ -107,13 +112,13 @@ def question1():
 def question2():
 
     IC = [0, 1]
-    print(LaplaceSolver5(np.zeros(12), IC, 1000))
+    print(LaplaceSolver(np.zeros(16), IC, 1000))
 
-    # print(pLaplaceSolver(np.zeros(16), IC, 500))
+    print(pLaplaceSolver(np.zeros(16), IC, 500))
 
-    # # print(psLaplaceSolver(np.zeros(16), IC, 500))
+    print(psLaplaceSolver(np.zeros(16), IC, 500))
 
-    print(psLaplaceSolver5(np.zeros(10), IC, 500))
+    print(psLaplaceSolver5(np.zeros(16), IC, 1000))
 
 
 def LaplaceSolver(inputArray, initalCondition, iteration):
@@ -185,47 +190,31 @@ def psLaplaceKernel(d_a, d_IC, d_stencil, rad):
     if i >= n:
         return
 
-
+    if i == 0:
+        d_a[i] = d_IC[0]
+    elif i == n - 1:
+        d_a[i] = d_IC[1]
 
     radius = len(d_stencil) // 2
     tIdx = cuda.threadIdx.x
     shIdx = tIdx + radius
     sh_f[shIdx] = d_a[i]
 
+    if tIdx < radius:
+        for k in range(radius):
+            sh_f[tIdx+k] = d_a[i - radius + k]
+    elif tIdx > cuda.blockDim.x - 1 - radius:
+        for k in range(radius):
+            sh_f[tIdx + 2*radius - k] = d_a[i + radius - k]
 
+    cuda.syncthreads()
 
-    # if tIdx < radius:
-    #     for k in range(radius):
-    #         sh_f[tIdx+k] = d_a[i - radius + k]
-    # elif tIdx > cuda.blockDim.x - 1 - radius:
-    #     for k in range(radius):
-    #         sh_f[tIdx + 2*radius - k] = d_a[i + radius - k]
-
-    # if tIdx < radius:
-    #   sh_f[tIdx] = d_a[i - radius]
-    # elif tIdx > cuda.blockDim.x - 1 - radius:
-    #   sh_f[tIdx + 2*radius] = d_a[i + radius]
-    # cuda.syncthreads()
-
-    # d_a[i] = 0
-    # elif i == 1:
-    #   d_a[i] = 0.0667
-    # elif i == n-2:
-    #   d_a[i] = 0.933
-    if i == 0:
-        d_a[i] = d_IC[0]
-    elif i == n - 1:
-        d_a[i] = d_IC[1]
-    elif (i == 1) or (i == n-2):
-        d_a[i] = 0.5 * (d_a[i-1] + d_a[i+1])
-    else:
-        d_a[i] = d_a[i - 2] * (-0.0333) + d_a[i - 1] * (0.5333) + d_a[i + 1] * (0.5333) + d_a[i + 2] * (-0.03333)
-    # if (i == 1) or (i == n-2):
-    #   d_a[i] = 0.5 * (sh_f[shIdx - 1] + sh_f[shIdx + 1])
-    # elif (i > 1) and (i < n-2):
-    #   d_a[i] = sh_f[shIdx - 2] * (-1/30) + sh_f[shIdx - 1] * (8/15) + sh_f[shIdx + 1] * (8/15) + sh_f[shIdx + 2] * (-1/30)
-        # for j in range(len(d_stencil)):
-        #   d_a[i] += sh_f[shIdx + j - radius]*d_stencil[j]
+    if (i == 1) or (i == n-2):
+      d_a[i] = 0.5 * (sh_f[shIdx - 1] + sh_f[shIdx + 1])
+    elif (i > 1) and (i < n-2):
+        d_a[i] = (1-0.9) * d_a[i]
+        for j in range(len(d_stencil)):
+            d_a[i] += 0.9 * (sh_f[shIdx + j - radius]*d_stencil[j])
 
 def psLaplaceSolver(inputArray, initalCondition, iteration):
 
@@ -262,13 +251,13 @@ def psLaplaceSolver5(inputArray, initalCondition, iteration):
     blockDim = TPB_2
 
     prevNorm = nu_norm(d_a, N) 
-    for j in range(5000):
+    for j in range(iteration):
         psLaplaceKernel[gridDim, blockDim](d_a, d_IC, d_stencil, RAD_2C)
-        # newNorm = nu_norm(d_a, N) 
-        # if (abs(newNorm - prevNorm) < 0.0001):
-        #   print(j)
-        #   break
-        # prevNorm = newNorm
+        newNorm = nu_norm(d_a, N) 
+        if (abs(newNorm - prevNorm) < 0.0001):
+          print(j)
+          break
+        prevNorm = newNorm
 
     return d_a.copy_to_host()
 
@@ -293,9 +282,208 @@ def nu_norm(d_a, n):
         res += out[i]
     return np.sqrt(res)
 
+""" Question 3 functions """
+def question3():
+    N = 64
+    x = np.linspace(-2, 2, N)
+    y = np.linspace(-2, 2, N)
+
+    distance = distance_cal(x, y)
+
+    # fig = plt.figure(4)
+    X, Y = np.meshgrid(x, y)
+    # plt.contourf(X, Y, np.transpose(distance))
+
+    # fig = plt.figure(5)
+    # ax = plt.axes(projection='3d')
+
+    # ax.scatter3D(X, Y, np.transpose(distance))
+    # ax.set_xlabel('x')
+    # ax.set_ylabel('y')
+    # ax.set_zlabel('dis')
+
+    startTime = time.time()
+    gradient = gradient_cal(x, y, distance)
+    pTime = time.time() - startTime
+
+    fig = plt.figure(6)
+    ax = plt.axes(projection='3d')
+
+    ax.plot_surface(X, Y, np.transpose(gradient))
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('grad')
+
+    startTime = time.time()
+    gradient = shGradient_cal(x, y, distance)
+    psTime = time.time() - startTime
+
+    fig = plt.figure(7)
+    ax = plt.axes(projection='3d')
+
+    ax.plot_surface(X, Y, np.transpose(gradient))
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('grad')
+
+
+    # plt.show()
+
+    print ("Acceleration for shared memory parallel implementation "
+        "(shared_mem_parallel/global_mem_parallel) is: ", 
+        psTime/pTime)
+
+
+@cuda.jit
+def distance_kernel(d_x, d_y, d_points, d_out):
+    nx = d_x.shape[0]
+    ny = d_y.shape[0]
+
+    i, j = cuda.grid(2)
+
+    if i < nx and j < ny:
+        dis1 = ((d_x[i] - d_points[0][0])**2 + (d_y[j] - d_points[0][1])**2)**0.5
+        dis2 = ((d_x[i] - d_points[1][0])**2 + (d_y[j] - d_points[1][1])**2)**0.5
+        dis3 = ((d_x[i] - d_points[2][0])**2 + (d_y[j] - d_points[2][1])**2)**0.5
+
+    dis = (dis1, dis2, dis3)
+    d_out[i, j] = dis[0]
+    for k in range(len(dis)-1):
+        if dis[k+1] < d_out[i, j]:
+            d_out[i, j] = dis[k+1]
+
+def distance_cal(x, y):
+
+    Nx = x.size
+    Ny = y.size
+
+    points = [[1, 0], [-1, 0], [0, 1]]
+
+    d_x = cuda.to_device(x)
+    d_y = cuda.to_device(y)
+    d_points = cuda.to_device(np.array(points))
+    d_out = cuda.device_array((Nx,Ny))
+
+    TPBX = 8
+    TPBY = 8
+
+    gridDims = ((Nx + TPBX - 1) // TPBX,
+                (Ny + TPBY - 1) // TPBY)
+    blockDims = (TPBX, TPBY)
+
+    distance_kernel[gridDims, blockDims](d_x, d_y, d_points, d_out)
+
+    return d_out.copy_to_host()
+
+@cuda.jit
+def gradient_kernel(d_u, delta_x, delta_y, d_out):
+    nx = d_u.shape[0]
+    ny = d_u.shape[1]
+
+    i, j = cuda.grid(2)
+
+    if i < nx and j < ny:
+        if i == 0:
+            gradientX = ((d_u[i, j] + d_u[i+1, j])/(delta_x))**2
+        elif i == nx-1:
+            gradientX = ((d_u[i-1, j] + d_u[i, j])/(delta_x))**2
+        else:
+            gradientX = ((d_u[i-1, j] + d_u[i+1, j])/(2*delta_x))**2
+        if j == 0:
+            gradientY = ((d_u[i, j] + d_u[i, j+1])/(delta_y))**2
+        elif j == ny-1:
+            gradientY = ((d_u[i, j-1] + d_u[i, j])/(delta_y))**2
+        else:
+            gradientY = ((d_u[i, j-1] + d_u[i, j+1])/(2*delta_y))**2
+
+        d_out[i, j] = gradientX + gradientY
+
+def gradient_cal(x, y, u):
+    Nx = x.size
+    Ny = y.size
+
+    delX = x[1] - x[0]
+    delY = y[1] - y[0]
+
+    d_u = cuda.to_device(u)
+    d_out = cuda.device_array((Nx, Ny))
+
+    TPBX = 8
+    TPBY = 8
+
+    gridDims = ((Nx + TPBX - 1) // TPBX,
+                (Ny + TPBY - 1) // TPBY)
+    blockDims = (TPBX, TPBY)
+
+    gradient_kernel[gridDims, blockDims](d_u, delX, delY, d_out)
+    return d_out.copy_to_host()
+
+@cuda.jit
+def shGradient_kernel(d_u, delta_x, delta_y, d_out):
+
+    nx = d_u.shape[0]
+    ny = d_u.shape[1]
+
+    i, j = cuda.grid(2)
+
+    sh_f = cuda.shared.array(shape = (NSHARED_3C_X, NSHARED_3C_Y), dtype = float64)
+    radius = 1
+    tIdx = cuda.threadIdx.x
+    tIdy = cuda.threadIdx.y
+
+    shx = tIdx + radius
+    shy = tIdy + radius
+    sh_f[shx, shy] = d_u[i, j]
+
+    if tIdx < radius:
+        sh_f[shx - radius, shy] = d_u[i - radius, j]
+    elif tIdx > cuda.blockDim.x - 1 - radius:
+        sh_f[shx + radius, shy] = d_u[i + radius, j]
+
+    if tIdy < radius:
+        sh_f[shx, shy - radius] = d_u[i, j - radius]
+    elif tIdy > cuda.blockDim.y - 1 - radius:
+        sh_f[shx, shy + radius] = d_u[i, j + radius]    
+
+    cuda.syncthreads()
+
+    if i < nx and j < ny:
+        if i == 0:
+            gradientX = ((sh_f[shx, shy] + sh_f[shx+1, shy])/(delta_x))**2
+        elif i == nx-1:
+            gradientX = ((sh_f[shx-1, shy] + sh_f[shx, shy])/(delta_x))**2
+        else:
+            gradientX = ((sh_f[shx-1, shy] + sh_f[shx+1, shy])/(2*delta_x))**2
+        if j == 0:
+            gradientY = ((sh_f[shx, shy] + sh_f[shx, shy+1])/(delta_y))**2
+        elif j == ny-1:
+            gradientY = ((sh_f[shx, shy-1] + sh_f[shx, shy])/(delta_y))**2
+        else:
+            gradientY = ((sh_f[shx, shy-1] + sh_f[shx, shy+1])/(2*delta_y))**2
+
+        d_out[i, j] = gradientX + gradientY
+
+def shGradient_cal(x, y, u):
+    Nx = x.size
+    Ny = y.size
+
+    delX = x[1] - x[0]
+    delY = y[1] - y[0]
+
+    d_u = cuda.to_device(u)
+    d_out = cuda.device_array((Nx, Ny))
+
+    gridDims = ((Nx + TPB_3C_X - 1) // TPB_3C_X,
+                (Ny + TPB_3C_Y - 1) // TPB_3C_Y)
+    blockDims = (TPB_3C_X, TPB_3C_Y)
+
+    shGradient_kernel[gridDims, blockDims](d_u, delX, delY, d_out)
+    return d_out.copy_to_host()
+
 def main():
     # question1()
-    question2()
+    # question2()
+    question3()
 
 if __name__ == '__main__':
     main()
