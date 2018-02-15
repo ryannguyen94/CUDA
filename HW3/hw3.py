@@ -480,6 +480,68 @@ def shGradient_cal(x, y, u):
     shGradient_kernel[gridDims, blockDims](d_u, delX, delY, d_out)
     return d_out.copy_to_host()
 
+""" Question 4 functions """
+def question4():
+    N = 64
+    x = np.linspace(-2, 2, N)
+    y = np.linspace(-2, 2, N)
+
+    f = gridCal(x, y)
+
+@cuda.jit
+def gridCal_kernel(d_x, d_y, d_out):
+    nx = d_x.shape[0]
+    ny = d_y.shape[0]
+
+    i, j = cuda.grid(2)
+
+    if i < nx and j < ny:
+        d_out[i, j] = d_x[i]**2 + d_y[i]**2 - 1
+
+def gridCal(x, y):
+    Nx = x.size
+    Ny = y.size
+
+    d_x = cuda.to_device(x)
+    d_y = cuda.to_device(y)
+    d_out = cuda.device_array((Nx, Ny))
+
+    TPBX = 8
+    TPBY = 8
+
+    gridDims = ((Nx + TPBX - 1) // TPBX,
+                (Ny + TPBY - 1) // TPBY)
+    blockDims = (TPBX, TPBY)
+
+    gridCal_kernel[gridDims, blockDims](d_x, d_y, d_out)
+    return d_out.copy_to_host()
+
+@cuda.jit
+def upwind_kernel(d_f, h):
+    nx = d_f.shape[0]
+    ny = d_f.shape[1]
+
+    i, j = cuda.grid(2)
+
+    if i > nx or j > ny:
+        return
+    if d_f[i, j] > 0:
+        T1 = min((d_f[i-1, j], d_f[i+1, j]))
+        T2 = min((d_f[i, j-1], d_f[i, j+1]))
+        a = 2
+        b = -2 * (T1+T2)
+        c = T1**2 + T2**2 - h**2
+        T = (-b + (b**2 - 4*a*c)**0.5) / (2*a)
+
+        if T > max((T1, T2)):
+            d_f[i, j] = T
+        elif T2 > T and T > T1:
+            d_f[i, j] = T1 + h
+        elif T1 > T and T > T2:
+            d_f[i, j] = T2 + h
+            
+
+
 def main():
     # question1()
     # question2()
