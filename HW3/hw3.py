@@ -486,7 +486,37 @@ def question4():
     x = np.linspace(-2, 2, N)
     y = np.linspace(-2, 2, N)
 
+    h = x[1] - x[0]
+
     f = gridCal(x, y)
+
+    fig = plt.figure(7)
+    X, Y = np.meshgrid(x, y)
+    plt.contourf(X, Y, np.transpose(f))
+
+    res = upwindCal(f, h, 10)
+    fig = plt.figure(8)
+    plt.contourf(X, Y, np.transpose(res))        
+
+    res = upwindCal(f, h, 20)
+    fig = plt.figure(9)
+    plt.contourf(X, Y, np.transpose(res))
+
+    f = -f
+
+    fig = plt.figure(10)
+    X, Y = np.meshgrid(x, y)
+    plt.contourf(X, Y, np.transpose(f))
+
+    res = upwindCal(f, h, 8)
+    fig = plt.figure(11)
+    plt.contourf(X, Y, np.transpose(res))        
+
+    res = upwindCal(f, h, 16)
+    fig = plt.figure(12)
+    plt.contourf(X, Y, np.transpose(res))
+
+    plt.show()
 
 @cuda.jit
 def gridCal_kernel(d_x, d_y, d_out):
@@ -496,7 +526,7 @@ def gridCal_kernel(d_x, d_y, d_out):
     i, j = cuda.grid(2)
 
     if i < nx and j < ny:
-        d_out[i, j] = d_x[i]**2 + d_y[i]**2 - 1
+        d_out[i, j] = d_x[i]**2 + d_y[j]**2 - 1
 
 def gridCal(x, y):
     Nx = x.size
@@ -526,26 +556,44 @@ def upwind_kernel(d_f, h):
     if i > nx or j > ny:
         return
     if d_f[i, j] > 0:
-        T1 = min((d_f[i-1, j], d_f[i+1, j]))
-        T2 = min((d_f[i, j-1], d_f[i, j+1]))
-        a = 2
-        b = -2 * (T1+T2)
-        c = T1**2 + T2**2 - h**2
-        T = (-b + (b**2 - 4*a*c)**0.5) / (2*a)
+        if 0 < i < nx-1 and 0 < j < ny-1:
+            T1 = min((d_f[i-1, j], d_f[i+1, j]))
+            T2 = min((d_f[i, j-1], d_f[i, j+1]))
+            a = 2
+            b = -2 * (T1+T2)
+            c = T1**2 + T2**2 - h**2
+            T = (-b + (b**2 - 4*a*c)**0.5) / (2*a)
 
-        if T > max((T1, T2)):
-            d_f[i, j] = T
-        elif T2 > T and T > T1:
-            d_f[i, j] = T1 + h
-        elif T1 > T and T > T2:
-            d_f[i, j] = T2 + h
+            if T > max((T1, T2)):
+                d_f[i, j] = T
+            elif T2 > T and T > T1:
+                d_f[i, j] = T1 + h
+            elif T1 > T and T > T2:
+                d_f[i, j] = T2 + h
+
+def upwindCal(f, h, iteration):
+    Nx = f.shape[0]
+    Ny = f.shape[1]
+
+    d_f = cuda.to_device(f)
+
+    TPBX = 8
+    TPBY = 8
+
+    gridDims = ((Nx + TPBX - 1) // TPBX,
+                (Ny + TPBY - 1) // TPBY)
+    blockDims = (TPBX, TPBY)
+    for i in range(iteration):
+        upwind_kernel[gridDims, blockDims](d_f, h)
+    return d_f.copy_to_host()
             
 
 
 def main():
     # question1()
     # question2()
-    question3()
+    # question3()
+    question4()
 
 if __name__ == '__main__':
     main()
