@@ -49,8 +49,8 @@ def analysisArray(testArray):
 
 def systhesizeArray(firstArray, secondArray):
     interlace = (np.transpose(np.array([firstArray, secondArray]))).flatten()
-    stencilEven = np.array([0, 1, -1], dtype = float32)
-    stencilOdd = np.array([1, 1, 0], dtype=float32)
+    stencilEven = np.array([0, 1, -1], dtype = np.float32)
+    stencilOdd = np.array([1, 1, 0], dtype=np.float32)
 
     N = np.size(interlace)
     ogArray = np.zeros(N)
@@ -80,6 +80,8 @@ def question1():
     [firstArray, secondArray] = analysisArray(testData1)
     plt.figure(0)
     plt.plot(x, firstArray, x, secondArray)
+    plt.title("1b - first input")
+    plt.legend(["first array", "second array"])
     print("Original array is ", testData1)
     print ("Synthesized array is ", systhesizeArray(firstArray, secondArray))
 
@@ -87,6 +89,8 @@ def question1():
     [firstArray, secondArray] = analysisArray(testData2)
     plt.figure(1)
     plt.plot(x, firstArray, x, secondArray)
+    plt.title("1b - second input")
+    plt.legend(["first array", "second array"])
     print("Original array is ", testData2)
     print ("Synthesized array is ", systhesizeArray(firstArray, secondArray))
 
@@ -94,6 +98,8 @@ def question1():
     [firstArray, secondArray] = analysisArray(testData3)
     plt.figure(2)
     plt.plot(x, firstArray, x, secondArray)
+    plt.title("1b - third input")
+    plt.legend(["first array", "second array"])
     print("Original array is ", testData3)
     print ("Synthesized array is ", systhesizeArray(firstArray, secondArray))
 
@@ -101,11 +107,17 @@ def question1():
     [firstArray, secondArray] = analysisArray(testData4)
     plt.figure(3)
     plt.plot(x, firstArray, x, secondArray)
+    plt.title("1b - fourth input")
+    plt.legend(["first array", "second array"])
     print("Original array is ", testData4)
     print ("Synthesized array is ", systhesizeArray(firstArray, secondArray))
 
     testData5 = np.zeros(16)
     [firstArray, secondArray] = analysisArray(testData5)
+    plt.figure("1e")
+    plt.plot(x, firstArray, x, secondArray)
+    plt.title("1e")
+    plt.legend(["first array", "second array"])
     print("Original array is ", testData5)
     print ("Synthesized array is ", systhesizeArray(firstArray, secondArray))
     print ("1e - The result looks identical to the input data")
@@ -128,10 +140,10 @@ def question2():
     print(psLaplaceSolver(np.zeros(16), IC, 500))
 
     print("Results of shared memory parallel implementation of RAD = 2")
-    print(psLaplaceSolver5(np.zeros(16), IC, 500)
+    print(psLaplaceSolver5(np.zeros(16), IC, 500))
 
-    print("The 5 point stencil approach takes more iteration to converge but probably",
-          " produce a better resolution of change over time")
+    print("The 5 point stencil approach takes more iteration to converge but probably"
+        " produce a better resolution of change over time")
 
 
 def LaplaceSolver(inputArray, initalCondition, iteration):
@@ -306,56 +318,37 @@ def question3():
 
     distance = distance_cal(x, y)
 
-    # fig = plt.figure(4)
+    plt.figure(4)
     X, Y = np.meshgrid(x, y)
-    # plt.contourf(X, Y, np.transpose(distance))
-    # plt.title("Distance grid")
+    plt.contourf(X, Y, np.transpose(distance))
+    plt.title("Distance grid")
 
     print("3a - The result looks sensible. Essentially a combination of 3 3d parabolas")
 
-    # fig = plt.figure(5)
-    # ax = plt.axes(projection='3d')
-
-    # ax.scatter3D(X, Y, np.transpose(distance))
-    # ax.set_xlabel('x')
-    # ax.set_ylabel('y')
-    # ax.set_zlabel('dis')
-    # plt.title("Distance grid 3d plot")
+    plotUtil3D(X, Y, np.transpose(distance), 5, 'x','y','dis',
+        "Distance grid 3d plot")
 
     startTime = time.time()
     gradient = gradient_cal(x, y, distance)
     pTime = time.time() - startTime
 
-    plt.figure(6)
-    ax = plt.axes(projection='3d')
-
-    ax.plot_surface(X, Y, np.transpose(gradient))
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('grad')
-    plt.title("3D plot of gradient square")
-    print("3b - The result looks reasonable")
+    plotUtil3D(X, Y, np.transpose(gradient), 6, 'x','y','grad',
+        "3D plot of gradient square")
 
     startTime = time.time()
     gradient = shGradient_cal(x, y, distance)
     psTime = time.time() - startTime
 
-    plt.figure(7)
-    ax = plt.axes(projection='3d')
-
-    ax.plot_surface(X, Y, np.transpose(gradient))
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('grad')
-    plt.title("3D plot of gradient square using shared memory technique")
+    plotUtil3D(X, Y, np.transpose(gradient), 7, 'x','y','grad',
+        "3D plot of gradient square using shared memory technique")
     print("3c - The result looks the same using the shared memory technique")
 
 
-    # plt.show()
+    plt.show()
 
     print ("Acceleration for shared memory parallel implementation "
-        "(shared_mem_parallel/global_mem_parallel) is: ", 
-        psTime/pTime)
+        "(global_mem_parallel/shared_mem_parallel) is: ", 
+        pTime/psTime)
 
 
 @cuda.jit
@@ -517,41 +510,55 @@ def question4():
 
     f = gridCal(x, y)
 
-    plt.figure(7)
     X, Y = np.meshgrid(x, y)
-    plt.contourf(X, Y, np.transpose(f))
-    plt.title("f")
+    # plt.contourf(X, Y, np.transpose(f))
+    plotUtil3D(X, Y, np.transpose(f), 8, 'x', 'y', 'f', 'original f')
 
     res = upwindCal(f, h, 10)
-    plt.figure(8)
-    plt.contourf(X, Y, np.transpose(res))        
-    plt.title("Upwind difference iteration = 10")
+    # plt.contourf(X, Y, np.transpose(res))
+    plotUtil3D(X, Y, np.transpose(res), 9, 'x', 'y', 'f', "Upwind difference iteration = 10")
 
     res = upwindCal(f, h, 20)
-    plt.figure(9)
-    plt.contourf(X, Y, np.transpose(res))
-    plt.title("Upwind difference iteration = 20")
+    # plt.contourf(X, Y, np.transpose(res))
+    plotUtil3D(X, Y, np.transpose(res), 10, 'x', 'y', 'f', "Upwind difference iteration = 20")
 
-    f = -f
+    print ("4c - Not much change from iteration 10 to 20")
+    plt.show()
 
-    plt.figure(10)
-    X, Y = np.meshgrid(x, y)
-    plt.contourf(X, Y, np.transpose(f))
-    plt.title("-f")
+    fd = -(res[:][:])
+    # plt.contourf(X, Y, np.transpose(fd))
+    plotUtil3D(X, Y, np.transpose(fd), 11, 'x', 'y', 'f', "Result flipped")
 
-    res = upwindCal(f, h, 8)
-    plt.figure(11)
-    plt.contourf(X, Y, np.transpose(res))
-    plt.title("Upwind difference of -f iteration = 8")
+    res = upwindCal(fd, h, 8)
+    # plt.contourf(X, Y, np.transpose(res))
+    plotUtil3D(X, Y, np.transpose(res), 12, 'x', 'y', 'f', "Upwind difference of flipped iteration = 8")
 
-    res = upwindCal(f, h, 16)
-    plt.figure(12)
-    plt.contourf(X, Y, np.transpose(res))
-    plt.title("Upwind difference of -f iteration = 16")
+    res = upwindCal(fd, h, 16)
+    # plt.contourf(X, Y, np.transpose(res))
+    plotUtil3D(X, Y, np.transpose(res), 13, 'x', 'y', 'f', "Upwind difference of flipped iteration = 16")
 
-    print ("4c+d - The results look normal and as expected.")
+    print ("4d - Not much change from iteration 8 to 16. The result is more pointy than",
+        " the original flipped")
+    plt.show()
+
+    fe = -(res[:][:])
+    plotUtil3D(X, Y, np.transpose(fe), 14, 'x', 'y', 'f', "Result flipped again")
+
+    res = upwindCal(fe, h, 16)
+    plotUtil3D(X, Y, np.transpose(res), 15, 'x', 'y', 'f', "Upwind difference iteration = 16")
+
+    print ("4e - Is not the same the original distance function.")
 
     plt.show()
+
+def plotUtil3D(x, y ,z, figNum, xlabel, ylabel, zlabel, title):
+    plt.figure(figNum)
+    ax = plt.axes(projection='3d')        
+    ax.plot_surface(x, y, z)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_zlabel(zlabel)
+    plt.title(title)
 
 @cuda.jit
 def gridCal_kernel(d_x, d_y, d_out):
@@ -625,9 +632,9 @@ def upwindCal(f, h, iteration):
 
 
 def main():
-    # question1()
-    # question2()
-    # question3()
+    question1()
+    question2()
+    question3()
     question4()
 
 if __name__ == '__main__':
