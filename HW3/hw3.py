@@ -72,6 +72,9 @@ def systhesizeArray(firstArray, secondArray):
     return ogArray
 
 def question1():
+    print ()
+    print ("---------- Question 1 ----------")
+
     x = np.linspace(0, 7, 8)
     testData1 = np.ones(16)
     [firstArray, secondArray] = analysisArray(testData1)
@@ -105,20 +108,30 @@ def question1():
     [firstArray, secondArray] = analysisArray(testData5)
     print("Original array is ", testData5)
     print ("Synthesized array is ", systhesizeArray(firstArray, secondArray))
+    print ("1e - The result looks identical to the input data")
 
     plt.show()
 
 """ Question 2 functions """
 def question2():
+    print ()
+    print ("---------- Question 2 ----------")
 
     IC = [0, 1]
-    print(LaplaceSolver(np.zeros(16), IC, 1000))
+    print ("Results of serial implementation after 500 iterations")
+    print(LaplaceSolver(np.zeros(16), IC, 500))
 
+    print("Results of parallel implementation after 500 iteration")
     print(pLaplaceSolver(np.zeros(16), IC, 500))
 
+    print("Results of shared memory parallel implementation")
     print(psLaplaceSolver(np.zeros(16), IC, 500))
 
-    print(psLaplaceSolver5(np.zeros(16), IC, 1000))
+    print("Results of shared memory parallel implementation of RAD = 2")
+    print(psLaplaceSolver5(np.zeros(16), IC, 500)
+
+    print("The 5 point stencil approach takes more iteration to converge but probably",
+          " produce a better resolution of change over time")
 
 
 def LaplaceSolver(inputArray, initalCondition, iteration):
@@ -232,7 +245,7 @@ def psLaplaceSolver(inputArray, initalCondition, iteration):
         psLaplaceKernel[gridDim, blockDim](d_a, d_IC, d_stencil, RAD_2B)
         newNorm = nu_norm(d_a, N) 
         if (abs(newNorm - prevNorm) < 0.0001):
-            print(j)
+            print("Converge at iteration: ", j, " for change of norm less than 1e-4")
             break
         prevNorm = newNorm
 
@@ -255,8 +268,8 @@ def psLaplaceSolver5(inputArray, initalCondition, iteration):
         psLaplaceKernel[gridDim, blockDim](d_a, d_IC, d_stencil, RAD_2C)
         newNorm = nu_norm(d_a, N) 
         if (abs(newNorm - prevNorm) < 0.0001):
-          print(j)
-          break
+            print("Converge at iteration: ", j, " for change of norm less than 1e-4")
+            break
         prevNorm = newNorm
 
     return d_a.copy_to_host()
@@ -284,6 +297,9 @@ def nu_norm(d_a, n):
 
 """ Question 3 functions """
 def question3():
+    print ()
+    print ("---------- Question 3 ----------")
+
     N = 64
     x = np.linspace(-2, 2, N)
     y = np.linspace(-2, 2, N)
@@ -293,6 +309,9 @@ def question3():
     # fig = plt.figure(4)
     X, Y = np.meshgrid(x, y)
     # plt.contourf(X, Y, np.transpose(distance))
+    # plt.title("Distance grid")
+
+    print("3a - The result looks sensible. Essentially a combination of 3 3d parabolas")
 
     # fig = plt.figure(5)
     # ax = plt.axes(projection='3d')
@@ -301,30 +320,35 @@ def question3():
     # ax.set_xlabel('x')
     # ax.set_ylabel('y')
     # ax.set_zlabel('dis')
+    # plt.title("Distance grid 3d plot")
 
     startTime = time.time()
     gradient = gradient_cal(x, y, distance)
     pTime = time.time() - startTime
 
-    fig = plt.figure(6)
+    plt.figure(6)
     ax = plt.axes(projection='3d')
 
     ax.plot_surface(X, Y, np.transpose(gradient))
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('grad')
+    plt.title("3D plot of gradient square")
+    print("3b - The result looks reasonable")
 
     startTime = time.time()
     gradient = shGradient_cal(x, y, distance)
     psTime = time.time() - startTime
 
-    fig = plt.figure(7)
+    plt.figure(7)
     ax = plt.axes(projection='3d')
 
     ax.plot_surface(X, Y, np.transpose(gradient))
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('grad')
+    plt.title("3D plot of gradient square using shared memory technique")
+    print("3c - The result looks the same using the shared memory technique")
 
 
     # plt.show()
@@ -482,6 +506,9 @@ def shGradient_cal(x, y, u):
 
 """ Question 4 functions """
 def question4():
+    print ()
+    print ("---------- Question 4 ----------")
+
     N = 64
     x = np.linspace(-2, 2, N)
     y = np.linspace(-2, 2, N)
@@ -490,31 +517,39 @@ def question4():
 
     f = gridCal(x, y)
 
-    fig = plt.figure(7)
+    plt.figure(7)
     X, Y = np.meshgrid(x, y)
     plt.contourf(X, Y, np.transpose(f))
+    plt.title("f")
 
     res = upwindCal(f, h, 10)
-    fig = plt.figure(8)
+    plt.figure(8)
     plt.contourf(X, Y, np.transpose(res))        
+    plt.title("Upwind difference iteration = 10")
 
     res = upwindCal(f, h, 20)
-    fig = plt.figure(9)
+    plt.figure(9)
     plt.contourf(X, Y, np.transpose(res))
+    plt.title("Upwind difference iteration = 20")
 
     f = -f
 
-    fig = plt.figure(10)
+    plt.figure(10)
     X, Y = np.meshgrid(x, y)
     plt.contourf(X, Y, np.transpose(f))
+    plt.title("-f")
 
     res = upwindCal(f, h, 8)
-    fig = plt.figure(11)
-    plt.contourf(X, Y, np.transpose(res))        
+    plt.figure(11)
+    plt.contourf(X, Y, np.transpose(res))
+    plt.title("Upwind difference of -f iteration = 8")
 
     res = upwindCal(f, h, 16)
-    fig = plt.figure(12)
+    plt.figure(12)
     plt.contourf(X, Y, np.transpose(res))
+    plt.title("Upwind difference of -f iteration = 16")
+
+    print ("4c+d - The results look normal and as expected.")
 
     plt.show()
 
